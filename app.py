@@ -33,17 +33,9 @@ DB_NAME = 'Summary_Report'
 DB_USER = 'postgres'
 DB_PASS = 'postgres'
 
-
 @st.cache_resource
 def get_connection():
     try:
-        # conn = psycopg2.connect(
-        #     host=DB_HOST,
-        #     port=DB_PORT,
-        #     dbname=DB_NAME,
-        #     user=DB_USER,
-        #     password=DB_PASS
-        # )
         conn = psycopg2.connect(
             host=st.secrets["DB_HOST"],
             port=st.secrets["DB_PORT"],
@@ -51,11 +43,36 @@ def get_connection():
             user=st.secrets["DB_USER"],
             password=st.secrets["DB_PASSWORD"]
         )
-        st.success(" Successfully connected to the database.")
+        st.success("✅ Successfully connected to the database.")
         return conn
     except Exception as e:
-        st.error(f" Database connection failed: {e}")
-        return None
+        st.error(f"❌ Database connection failed: {e}")
+        st.stop()
+
+conn = get_connection()
+
+# @st.cache_resource
+# def get_connection():
+#     try:
+#         # conn = psycopg2.connect(
+#         #     host=DB_HOST,
+#         #     port=DB_PORT,
+#         #     dbname=DB_NAME,
+#         #     user=DB_USER,
+#         #     password=DB_PASS
+#         # )
+#         conn = psycopg2.connect(
+#             host=st.secrets["DB_HOST"],
+#             port=st.secrets["DB_PORT"],
+#             dbname=st.secrets["DB_NAME"],
+#             user=st.secrets["DB_USER"],
+#             password=st.secrets["DB_PASSWORD"]
+#         )
+#         st.success(" Successfully connected to the database.")
+#         return conn
+#     except Exception as e:
+#         st.error(f" Database connection failed: {e}")
+#         return None
 
 conn = get_connection()
 
