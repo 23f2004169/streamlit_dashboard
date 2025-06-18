@@ -1,0 +1,7 @@
+streamlit
+pandas
+psycopg2-binary
+plotly
+streamlit-plotly-events
+openpyxl
+python-dateutil
