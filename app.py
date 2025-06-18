@@ -406,6 +406,8 @@ st.plotly_chart(fig3, use_container_width=True)
 
 
 # ------------------------ Hardcoded Excel Layout ------------------------
+
+
 # Load the Excel template
 template_path = "language_report.xlsx"  # Ensure this file is present in working dir
 wb = load_workbook(template_path)
@@ -501,25 +503,6 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-st.markdown("""
-    <style>
-    div.stDownloadButton > button {
-        background-color: #28a745;
-        color: white;
-        font-weight: bold;
-        border: 2px solid #1e7e34;
-        border-radius: 10px;
-        padding: 0.75em 1.5em;
-        font-size: 1.1em;
-        transition: 0.3s;
-    }
-    div.stDownloadButton > button:hover {
-        background-color: #218838;
-        border-color: #1c7430;
-        transform: scale(1.03);
-    }
-    </style>
-""", unsafe_allow_html=True)
 
 
 
