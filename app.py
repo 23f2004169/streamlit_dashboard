@@ -32,7 +32,6 @@ st.markdown("""
 # DB_NAME = 'Summary_Report'
 # DB_USER = 'postgres'
 # DB_PASS = 'postgres'
-
 # @st.cache_resource
 # def get_connection():
 #     try:
@@ -66,7 +65,6 @@ st.markdown("""
 #     except Exception as e:
 #         st.error(f"❌ Database connection failed: {e}")
 #         st.stop()
-
 # conn = get_connection()
 
 DB_HOST = "turntable.proxy.rlwy.net"
@@ -74,8 +72,6 @@ DB_PORT = "17356"
 DB_NAME = "railway"
 DB_USER = "postgres"
 DB_PASSWORD = "EvFmtpzsUtMeblVMYtZgOSrDnVlehUVU"
-import streamlit as st
-import psycopg2
 
 conn = psycopg2.connect(
     host=st.secrets["database"]["host"],
@@ -86,8 +82,8 @@ conn = psycopg2.connect(
 )
 
 
-st.markdown("---")
 
+st.markdown("---")
 # ------------------- Time Filter Helper -------------------
 def apply_time_filter(df, time_filter):
     today = dt.date.today()
@@ -116,9 +112,6 @@ def apply_time_filter(df, time_filter):
         df = df[(df["updated_at"].dt.date >= start_date) & (df["updated_at"].dt.date <= end_date)]
     return df
 
-df_debug = pd.read_sql("SELECT * FROM intermediate_table LIMIT 5", conn)
-st.write("Intermediate table sample:")
-st.write(df_debug)
 
 # ------------------- Chart 1: By Category & Script Type -------------------
 # query_script_type = """
@@ -256,7 +249,7 @@ st.download_button(
 
 
 # ------------------- Chart 1 Drilldown -------------------
-st.markdown("### 🔍 Category Drilldown (Dropdown)")
+# st.markdown("###  Category Drilldown")
 
 category_options = ["-- Select a category --"] + sorted(categories)
 selected_category = st.selectbox("Select a Category to Drill Down", options=category_options)
@@ -335,15 +328,27 @@ with col5:
         horizontal=True
     )
 
+# with col6:
+#     categories2 = ["All"] + sorted(df_lang["category"].dropna().unique())
+#     selected_category2 = st.selectbox("Select Category", options=categories2, key="cat2")
+
+#     script_types2 = ["All"] + sorted(df_lang["script_type"].dropna().unique())
+#     selected_script_type2 = st.selectbox("Select Script Type", options=script_types2, key="stype2")
+
+#     languages2 = ["All"] + sorted(df_lang["language"].dropna().unique())
+#     selected_language2 = st.selectbox("Select Language", options=languages2, key="lang2")
 with col6:
     categories2 = ["All"] + sorted(df_lang["category"].dropna().unique())
     selected_category2 = st.selectbox("Select Category", options=categories2, key="cat2")
 
-    script_types2 = ["All"] + sorted(df_lang["script_type"].dropna().unique())
-    selected_script_type2 = st.selectbox("Select Script Type", options=script_types2, key="stype2")
+    col_script, col_lang = st.columns(2)
+    with col_script:
+        script_types2 = ["All"] + sorted(df_lang["script_type"].dropna().unique())
+        selected_script_type2 = st.selectbox("Select Script Type", options=script_types2, key="stype2")
 
-    languages2 = ["All"] + sorted(df_lang["language"].dropna().unique())
-    selected_language2 = st.selectbox("Select Language", options=languages2, key="lang2")
+    with col_lang:
+        languages2 = ["All"] + sorted(df_lang["language"].dropna().unique())
+        selected_language2 = st.selectbox("Select Language", options=languages2, key="lang2")
 
 
 df2_filtered = apply_time_filter(df_lang.copy(), time_filter2)
@@ -399,18 +404,8 @@ fig3.update_layout(
 )
 st.plotly_chart(fig3, use_container_width=True)
 
-# -------------------------------------------------------------
-
-# st.download_button(
-#     label="📅 Download Chart 2 Data as CSV",
-#     data=df2_filtered.to_csv(index=False),
-#     file_name="language_script_type_annotations.csv",
-#     mime="text/csv"
-# )
 
 # ------------------------ Hardcoded Excel Layout ------------------------
-
-
 # Load the Excel template
 template_path = "language_report.xlsx"  # Ensure this file is present in working dir
 wb = load_workbook(template_path)
@@ -506,69 +501,35 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
+st.markdown("""
+    <style>
+    div.stDownloadButton > button {
+        background-color: #28a745;
+        color: white;
+        font-weight: bold;
+        border: 2px solid #1e7e34;
+        border-radius: 10px;
+        padding: 0.75em 1.5em;
+        font-size: 1.1em;
+        transition: 0.3s;
+    }
+    div.stDownloadButton > button:hover {
+        background-color: #218838;
+        border-color: #1c7430;
+        transform: scale(1.03);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 
-#--------------------------------------
 
-# from openpyxl import Workbook
-# from openpyxl.utils.dataframe import dataframe_to_rows
-# from io import BytesIO
+# st.markdown("###  Language Drilldown ")
 
-# # Create workbook and summary sheet
-# wb = Workbook()
-# summary_ws = wb.active
-# summary_ws.title = "Summary"
-
-# # Add headers to summary
-# summary_headers = ["Language", "Category", "Script Type", "Planned", "Actual", "Last Updated"]
-# summary_ws.append(summary_headers)
-
-# # Add rows to summary
-# for _, row in df2_filtered.iterrows():
-#     summary_ws.append([
-#         row["language"],
-#         row["category"],
-#         row["script_type"],
-#         int(row["planned"]) if pd.notna(row["planned"]) else 0,
-#         int(row["actual"]) if pd.notna(row["actual"]) else 0,
-#         row["updated_at"].strftime("%Y-%m-%d") if pd.notna(row["updated_at"]) else ""
-#     ])
-
-# # Create individual sheets per language
-# for lang in df2_filtered["language"].unique():
-#     lang_df = df2_filtered[df2_filtered["language"] == lang].copy()
-#     lang_df = lang_df[["category", "script_type", "planned", "actual", "updated_at"]]
-#     lang_df["planned"] = lang_df["planned"].fillna(0).astype(int)
-#     lang_df["actual"] = lang_df["actual"].fillna(0).astype(int)
-#     lang_df["updated_at"] = lang_df["updated_at"].dt.strftime("%Y-%m-%d")
-
-#     ws = wb.create_sheet(title=lang[:31])  # Excel sheet names max length = 31
-#     ws.append(["Category", "Script Type", "Planned", "Actual", "Last Updated"])
-
-#     for r in dataframe_to_rows(lang_df, index=False, header=False):
-#         ws.append(r)
-
-# # Save to memory
-# excel_bytes = BytesIO()
-# wb.save(excel_bytes)
-# excel_bytes.seek(0)
-
-# # Download button
-# st.download_button(
-#     label="📥 Download Multi-Sheet Excel Report",
-#     data=excel_bytes,
-#     file_name="language_wise_report.xlsx",
-#     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-# )
-
-# ------------------- Language Drilldown Dropdown -------------------
-st.markdown("### 🔍 Language Drilldown (Dropdown)")
-# selected_language = st.selectbox("Select a Language to Drill Down", options=sorted(languages))
-available_langs = sorted(df2_filtered["language"].unique())
+# ----------------------- Language Drilldown ------------------------
+available_langs = ["--Select a Language--"] + sorted(df2_filtered["language"].unique())
 selected_language = st.selectbox("Select a Language to Drill Down", options=available_langs)
 
-
-if selected_language:
+if selected_language != "--Select a Language--":
     lang_df = df2_filtered[df2_filtered["language"] == selected_language].copy()
     lang_df = lang_df.groupby("script_type")[["planned", "actual"]].sum().reset_index()
 
@@ -596,7 +557,7 @@ if selected_language:
         title=f"📌 Detailed Breakdown for Language: '{selected_language}'",
         xaxis_title="Script Type",
         yaxis_title="Annotation Count",
-        barmode="group",  # <-- Grouped bars instead of stacked
+        barmode="group",
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         legend_title="Annotation Type"
@@ -605,10 +566,6 @@ if selected_language:
 
 
 # ------------------- Chart 3: Daily User Progress (Filtered) -------------------
-import streamlit as st
-import pandas as pd
-import datetime as dt
-import plotly.graph_objects as go
 
 st.markdown("---")
 st.markdown("### <a name='chart-3'></a>📈 Chart 3: Daily User Progress (Filtered)", unsafe_allow_html=True)
@@ -618,7 +575,7 @@ base_query = "SELECT DISTINCT language, user_first_name, category, CAST(workspac
 df_filters = pd.read_sql(base_query, conn)
 
 # --- Sidebar Filters Logic (Cascading Dropdowns) ---
-st.markdown("#### 🔎 Apply Filters")
+st.markdown("####  Apply Filters")
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -730,7 +687,7 @@ fig4.add_trace(go.Scatter(
 ))
 
 # --- Dynamic Title ---
-title_text = "📅 Daily User Progress"
+title_text = " Daily User Progress"
 if selected_user != "All":
     title_text += f" for {selected_user}"
 if selected_category != "All":
@@ -762,160 +719,6 @@ st.download_button(
     key="chart3_download"
 )
 
-
-# # ------------------- Chart 3: Daily User Progress (Filtered) -------------------
-# st.markdown("---")
-# st.markdown("### <a name='chart-3'></a>📈 Chart 3: Daily User Progress (Filtered)", unsafe_allow_html=True)
-
-# # --- Fetch Distinct Filter Options ---
-# usernames = ["All"] + pd.read_sql(
-#     "SELECT DISTINCT user_first_name FROM intermediate_table WHERE user_first_name IS NOT NULL ORDER BY user_first_name",
-#     conn)["user_first_name"].tolist()
-
-# categories = ["All"] + pd.read_sql(
-#     "SELECT DISTINCT category FROM intermediate_table WHERE category IS NOT NULL ORDER BY category",
-#     conn)["category"].tolist()
-
-# workspace_ids = ["All"] + pd.read_sql(
-#     "SELECT DISTINCT workspace_id FROM intermediate_table WHERE workspace_id IS NOT NULL ORDER BY workspace_id",
-#     conn)["workspace_id"].astype(str).tolist()
-
-# languages = ["All"] + pd.read_sql(
-#     "SELECT DISTINCT language FROM intermediate_table WHERE language IS NOT NULL ORDER BY language",
-#     conn)["language"].tolist()
-
-
-# # --- Sidebar Filters ---
-# col1, col2, col3 = st.columns([2, 2, 3])
-
-# with col1:
-#     selected_user = st.selectbox("👤 Select Username", usernames, index=0, key="chart3_user")
-
-# with col2:
-#     selected_category = st.selectbox("🏷️ Select Category", categories, index=0, key="chart3_category")
-
-# with col3:
-#     selected_workspace = st.selectbox("🗂️ Select Workspace ID", workspace_ids, index=0, key="chart3_ws")
-
-# with col1:
-#     selected_language = st.selectbox("🗣️ Select Language", languages, index=0, key="chart3_language")
-
-
-
-# # --- Time Filter ---
-# time_filter = st.radio("⏱ Time Range", ["All Time", "Today", "Yesterday", "Last Week", "Last Month", "Custom Range"],
-#                        horizontal=True, key="chart3_time")
-
-# # --- Time Logic ---
-# today = dt.date.today()
-# start_date, end_date = None, today
-
-# if time_filter == "Today":
-#     start_date = today
-# elif time_filter == "Yesterday":
-#     start_date = today - dt.timedelta(days=1)
-#     end_date = start_date
-# elif time_filter == "Last Week":
-#     start_date = today - dt.timedelta(days=today.weekday() + 7)
-#     end_date = start_date + dt.timedelta(days=6)
-# elif time_filter == "Last Month":
-#     first_day_this_month = today.replace(day=1)
-#     start_date = (first_day_this_month - dt.timedelta(days=1)).replace(day=1)
-#     end_date = first_day_this_month - dt.timedelta(days=1)
-# elif time_filter == "Custom Range":
-#     col4, col5 = st.columns(2)
-#     with col4:
-#         start_date = st.date_input("Start Date", value=today - dt.timedelta(days=30), key="c3_start")
-#     with col5:
-#         end_date = st.date_input("End Date", value=today, key="c3_end")
-
-# # --- WHERE clause building ---
-# where_clauses = []
-# params = []
-
-# if selected_user != "All":
-#     where_clauses.append("user_first_name = %s")
-#     params.append(selected_user)
-
-# if selected_category != "All":
-#     where_clauses.append("category = %s")
-#     params.append(selected_category)
-
-# if selected_workspace != "All":
-#     where_clauses.append("CAST(workspace_id AS TEXT) = %s")
-#     params.append(selected_workspace)
-
-# if selected_language != "All":
-#     where_clauses.append("language = %s")
-#     params.append(selected_language)
-
-# if time_filter != "All Time" and start_date:
-#     where_clauses.append("DATE(updated_at) BETWEEN %s AND %s")
-#     params.extend([start_date, end_date])
-
-# where_clause = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
-
-# # --- Final SQL Query ---
-# query_progress = f"""
-# SELECT 
-#     DATE(updated_at) AS work_date, 
-#     user_first_name,
-#     category,
-#     COUNT(*) AS annotations_done
-# FROM intermediate_table
-# {where_clause}
-# GROUP BY work_date, user_first_name, category
-# ORDER BY work_date ASC;
-# """
-
-# # --- Load & Process Data ---
-# df_progress = pd.read_sql(query_progress, conn, params=params)
-# df_progress["work_date"] = pd.to_datetime(df_progress["work_date"])
-
-# # --- Plotting ---
-# fig4 = go.Figure()
-# fig4.add_trace(go.Scatter(
-#     x=df_progress["work_date"],
-#     y=df_progress["annotations_done"],
-#     mode="lines+markers",
-#     name="Annotations Done",
-#     marker=dict(color="#F39C12"),
-#     line=dict(width=2)
-# ))
-
-# # --- Dynamic Title ---
-# title_text = "📅 Daily User Progress"
-# if selected_user != "All":
-#     title_text += f" for {selected_user}"
-# if selected_category != "All":
-#     title_text += f" in '{selected_category}'"
-# if selected_workspace != "All":
-#     title_text += f" (Workspace ID: {selected_workspace})"
-# if selected_language != "All":
-#     title_text += f" in language '{selected_language}'"
-    
-# if time_filter != "All Time":
-#     title_text += f" ({start_date} to {end_date})"
-
-# fig4.update_layout(
-#     title=title_text,
-#     xaxis_title="Date",
-#     yaxis_title="Annotations Done",
-#     plot_bgcolor="rgba(0,0,0,0)",
-#     paper_bgcolor="rgba(0,0,0,0)"
-# )
-
-# # --- Display Chart ---
-# st.plotly_chart(fig4, use_container_width=True, key="chart3_fig")
-
-# # --- Download Button ---
-# st.download_button(
-#     label="⬇️ Download Chart 3 Data as CSV",
-#     data=df_progress.to_csv(index=False),
-#     file_name="daily_user_progress_filtered.csv",
-#     mime="text/csv",
-#     key="chart3_download"
-# )
 
 # ------------------- Chart 4: Task Status by Target Language  -------------------
 st.markdown("---")
@@ -1025,7 +828,7 @@ fig6.add_trace(go.Bar(
 ))
 
 # Title logic
-title4 = "📊 Task Status by Target Language"
+title4 = " Task Status by Target Language"
 if selected_language != "All":
     title4 += f" - {selected_language}"
 if time_filter != "All Time":
@@ -1203,7 +1006,7 @@ if workspace_id:
         )
         # fig.update_traces(
         #     textposition='outside',
-        #     textangle=0,  # ➤ This makes label horizontal
+        #     textangle=0,  #  This makes label horizontal
         #     textfont_size=12
         # )
         fig.update_traces(
@@ -1300,60 +1103,6 @@ if workspace_id:
                 # st.plotly_chart(fig_detail, use_container_width=True)
                 st.plotly_chart(fig_detail, use_container_width=True, key=f"plotly_chart_{selected_project}")
 
-        
-        # if selected_project:
-        #     df_detail = get_annotation_details(int(selected_project))
-
-        #     if df_detail.empty:
-        #         st.info("No annotation data for this project.")
-        #     else:
-        #         # Hide label if count is 0
-        #         # Filter out rows with Count == 0 to exclude them from the chart
-        #         df_detail = df_detail[df_detail["Count"] > 0]
-
-        #         label_text = df_detail["Count"].apply(lambda x: str(x) if x > 0 else None)
-        #         fig_detail = px.bar(
-        #             df_detail,
-        #             x="Annotation Type",
-        #             y="Count",
-        #             color="Annotation Status",
-        #             barmode="group",
-        #             text=df_detail["Count"],
-        #             title=f"Annotation Status Breakdown for Project {selected_project}"
-        #         )
-                
-        #         fig_detail.update_layout(
-        #             xaxis_title="Annotation Type",
-        #             yaxis_title="Count",
-        #             xaxis=dict(type='category'),
-        #             legend_title_text='Annotation Status',
-        #             bargap=0.15,        # Adjust spacing between bars
-        #             bargroupgap=0       # No gap between grouped bars
-        #         )
-                
-        #         fig_detail.update_traces(
-        #             textposition='inside',
-        #             insidetextanchor='middle',
-        #             textangle=0
-        #         )
-# XXXXXXXXXXXXXXXXXXXXXXXXX
-                # fig_detail = px.bar(
-                #     df_detail,
-                #     x="Annotation Type",
-                #     y="Count",
-                #     color="Annotation Status",
-                #     barmode="group",
-                #     text=label_text,
-                #     title=f" Annotation Status Breakdown for Project {selected_project}"
-                # )
-                # fig_detail.update_layout(
-                #     xaxis_title="Annotation Type",
-                #     yaxis_title="Count",
-                #     xaxis=dict(type='category'),
-                #     legend_title_text='Annotation Status'
-                # )
-                # fig_detail.update_traces(textposition='outside')
-                # st.plotly_chart(fig_detail, use_container_width=True)
 # Download button for Drilldown Chart 5
 csv_detail = df_detail.to_csv(index=False).encode('utf-8')
 st.download_button(
