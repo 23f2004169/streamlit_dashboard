@@ -37,12 +37,19 @@ DB_PASS = 'postgres'
 @st.cache_resource
 def get_connection():
     try:
+        # conn = psycopg2.connect(
+        #     host=DB_HOST,
+        #     port=DB_PORT,
+        #     dbname=DB_NAME,
+        #     user=DB_USER,
+        #     password=DB_PASS
+        # )
         conn = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS
+            host=st.secrets["DB_HOST"],
+            port=st.secrets["DB_PORT"],
+            dbname=st.secrets["DB_NAME"],
+            user=st.secrets["DB_USER"],
+            password=st.secrets["DB_PASSWORD"]
         )
         # st.success(" Successfully connected to the database.")
         return conn
