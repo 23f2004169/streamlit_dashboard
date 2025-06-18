@@ -51,10 +51,10 @@ def get_connection():
             user=st.secrets["DB_USER"],
             password=st.secrets["DB_PASSWORD"]
         )
-        # st.success(" Successfully connected to the database.")
+        st.success(" Successfully connected to the database.")
         return conn
     except Exception as e:
-        # st.error(f" Database connection failed: {e}")
+        st.error(f" Database connection failed: {e}")
         return None
 
 conn = get_connection()
