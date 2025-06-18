@@ -116,6 +116,9 @@ def apply_time_filter(df, time_filter):
         df = df[(df["updated_at"].dt.date >= start_date) & (df["updated_at"].dt.date <= end_date)]
     return df
 
+df_debug = pd.read_sql("SELECT * FROM intermediate_table LIMIT 5", conn)
+st.write("Intermediate table sample:")
+st.write(df_debug)
 
 # ------------------- Chart 1: By Category & Script Type -------------------
 # query_script_type = """
