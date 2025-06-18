@@ -51,23 +51,40 @@ st.markdown("""
 # conn = get_connection()
 
 
-@st.cache_resource
-def get_connection():
-    try:
-        conn = psycopg2.connect(
-            host=st.secrets["DB_HOST"],
-            port=st.secrets["DB_PORT"],
-            dbname=st.secrets["DB_NAME"],
-            user=st.secrets["DB_USER"],
-            password=st.secrets["DB_PASS"]
-        )
-        st.success("✅ Successfully connected to the database.")
-        return conn
-    except Exception as e:
-        st.error(f"❌ Database connection failed: {e}")
-        st.stop()
+# @st.cache_resource
+# def get_connection():
+#     try:
+#         conn = psycopg2.connect(
+#             host=st.secrets["DB_HOST"],
+#             port=st.secrets["DB_PORT"],
+#             dbname=st.secrets["DB_NAME"],
+#             user=st.secrets["DB_USER"],
+#             password=st.secrets["DB_PASS"]
+#         )
+#         st.success("✅ Successfully connected to the database.")
+#         return conn
+#     except Exception as e:
+#         st.error(f"❌ Database connection failed: {e}")
+#         st.stop()
 
-conn = get_connection()
+# conn = get_connection()
+
+DB_HOST = "turntable.proxy.rlwy.net"
+DB_PORT = "17356"
+DB_NAME = "railway"
+DB_USER = "postgres"
+DB_PASSWORD = "EvFmtpzsUtMeblVMYtZgOSrDnVlehUVU"
+import streamlit as st
+import psycopg2
+
+conn = psycopg2.connect(
+    host=st.secrets["database"]["host"],
+    port=st.secrets["database"]["port"],
+    dbname=st.secrets["database"]["name"],
+    user=st.secrets["database"]["user"],
+    password=st.secrets["database"]["password"]
+)
+
 
 st.markdown("---")
 
