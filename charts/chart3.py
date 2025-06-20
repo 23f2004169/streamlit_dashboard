@@ -1,50 +1,71 @@
-# anudesh_dashboard/charts/chart3.py
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from utils import apply_time_filter
-
 import datetime as dt
+from utils import apply_time_filter
 
 def render_chart3(conn):
     st.markdown("---")
     st.markdown("### <a name='chart-3'></a>📈 Chart 3: Daily User Progress (Filtered)", unsafe_allow_html=True)
 
     base_query = """
-        SELECT DISTINCT language, user_first_name, category, CAST(workspace_id AS TEXT) AS workspace_id 
+        SELECT DISTINCT language, user_first_name, user_last_name, category, 
+               CAST(workspace_id AS TEXT) AS workspace_id 
         FROM intermediate_table 
-        WHERE language IS NOT NULL AND user_first_name IS NOT NULL 
-              AND category IS NOT NULL AND workspace_id IS NOT NULL
+        WHERE language IS NOT NULL 
+              AND user_first_name IS NOT NULL 
+              AND user_last_name IS NOT NULL
+              AND category IS NOT NULL 
+              AND workspace_id IS NOT NULL
     """
     df_filters = pd.read_sql(base_query, conn)
+    df_filters["user_full_name"] = df_filters["user_first_name"] + " " + df_filters["user_last_name"]
 
     st.markdown("####  Apply Filters")
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        selected_language = st.selectbox("🎙️ Select Language", ["All"] + sorted(df_filters["language"].unique().tolist()), index=0, key="c3_language")
+        selected_language = st.selectbox(
+            "🎙️ Select Language", 
+            ["All"] + sorted(df_filters["language"].unique().tolist()), 
+            index=0, key="c3_language"
+        )
 
     df_filtered = df_filters.copy()
     if selected_language != "All":
         df_filtered = df_filtered[df_filtered["language"] == selected_language]
 
     with col2:
-        users = sorted(df_filtered["user_first_name"].unique().tolist())
-        selected_user = st.selectbox("👤 Select User", ["All"] + users, index=0, key="c3_user")
+        users = sorted(df_filtered["user_full_name"].unique().tolist())
+        selected_user = st.selectbox(
+            "👤 Select User", ["All"] + users, index=0, key="c3_user"
+        )
+
     if selected_user != "All":
-        df_filtered = df_filtered[df_filtered["user_first_name"] == selected_user]
+        df_filtered = df_filtered[df_filtered["user_full_name"] == selected_user]
+        selected_first_name = df_filtered["user_first_name"].iloc[0]
+        selected_last_name = df_filtered["user_last_name"].iloc[0]
 
     with col3:
         categories = sorted(df_filtered["category"].unique().tolist())
-        selected_category = st.selectbox("🏷️ Select Category", ["All"] + categories, index=0, key="c3_category")
+        selected_category = st.selectbox(
+            "🏷️ Select Category", ["All"] + categories, index=0, key="c3_category"
+        )
+
     if selected_category != "All":
         df_filtered = df_filtered[df_filtered["category"] == selected_category]
 
     with col4:
         workspaces = sorted(df_filtered["workspace_id"].unique().tolist())
-        selected_workspace = st.selectbox("📂 Select Workspace ID", ["All"] + workspaces, index=0, key="c3_workspace")
+        selected_workspace = st.selectbox(
+            "📂 Select Workspace ID", ["All"] + workspaces, index=0, key="c3_workspace"
+        )
 
-    time_filter = st.radio("⏱ Time Range", ["All Time", "Today", "Yesterday", "Last Week", "Last Month", "Custom Range"], horizontal=True, key="c3_time")
+    time_filter = st.radio(
+        "⏱ Time Range", 
+        ["All Time", "Today", "Yesterday", "Last Week", "Last Month", "Custom Range"], 
+        horizontal=True, key="c3_time"
+    )
 
     today = dt.date.today()
     start_date, end_date = None, today
@@ -76,8 +97,8 @@ def render_chart3(conn):
         params.append(selected_language)
 
     if selected_user != "All":
-        where_clauses.append("user_first_name = %s")
-        params.append(selected_user)
+        where_clauses.append("user_first_name = %s AND user_last_name = %s")
+        params.extend([selected_first_name, selected_last_name])
 
     if selected_category != "All":
         where_clauses.append("category = %s")
@@ -93,17 +114,22 @@ def render_chart3(conn):
 
     where_clause = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
-    day_type = st.radio("🗕 Day Type", ["All Days", "Weekdays Only", "Weekends Only"], horizontal=True, key="c3_daytype")
+    day_type = st.radio(
+        "🗕 Day Type", 
+        ["All Days", "Weekdays Only", "Weekends Only"], 
+        horizontal=True, key="c3_daytype"
+    )
 
     query_progress = f"""
     SELECT 
         DATE(updated_at) AS work_date, 
         user_first_name,
+        user_last_name,
         category,
         COUNT(*) AS annotations_done
     FROM intermediate_table
     {where_clause}
-    GROUP BY work_date, user_first_name, category
+    GROUP BY work_date, user_first_name, user_last_name, category
     ORDER BY work_date ASC;
     """
 
@@ -114,6 +140,8 @@ def render_chart3(conn):
         df_progress = df_progress[df_progress["work_date"].dt.weekday < 5]
     elif day_type == "Weekends Only":
         df_progress = df_progress[df_progress["work_date"].dt.weekday >= 5]
+
+    df_progress["user_full_name"] = df_progress["user_first_name"] + " " + df_progress["user_last_name"]
 
     fig4 = go.Figure()
     fig4.add_trace(go.Scatter(

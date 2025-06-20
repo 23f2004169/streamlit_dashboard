@@ -1,4 +1,3 @@
-# anudesh_dashboard/charts/chart5.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -7,16 +6,15 @@ from itertools import product
 # ------------------------
 # Cached workspace loader
 # ------------------------
-# @st.cache_data
-# def get_workspaces(conn):
-#     with conn.cursor() as cur:
-#         cur.execute("SELECT DISTINCT workspace_id FROM intermediate_table ORDER BY workspace_id;")
-#         return [row[0] for row in cur.fetchall()]
 @st.cache_data
 def get_workspaces(_conn):
     with _conn.cursor() as cur:
-        cur.execute("SELECT DISTINCT workspace_id FROM intermediate_table ORDER BY workspace_id;")
-        return [row[0] for row in cur.fetchall()]
+        cur.execute("""
+            SELECT DISTINCT workspace_id, workspace_name 
+            FROM intermediate_table 
+            ORDER BY workspace_id;
+        """)
+        return [(row[0], row[1]) for row in cur.fetchall()]
 
 # -----------------------------------
 # Get aggregated annotation stats
@@ -25,6 +23,7 @@ def get_annotation_stats(conn, workspace_id):
     query = """
         SELECT 
             project_id,
+            project_title,
             COUNT(*) AS total_tasks,
             COUNT(CASE 
                 WHEN task_status IN ('annotated', 'reviewed', 'super_checked', 'exported') THEN 1
@@ -35,7 +34,7 @@ def get_annotation_stats(conn, workspace_id):
             END) AS reviewed_count
         FROM intermediate_table
         WHERE workspace_id = %s
-        GROUP BY project_id
+        GROUP BY project_id, project_title
         ORDER BY project_id;
     """
     return pd.read_sql_query(query, conn, params=(workspace_id,))
@@ -44,23 +43,24 @@ def get_annotation_stats(conn, workspace_id):
 # Get drilldown annotation breakdown
 # -----------------------------------
 def get_annotation_details(conn, project_id):
-    query= """SELECT
-    project_id,
-    annotation_status,
-    CASE 
-        WHEN annotation_status IN ('labeled', 'unlabeled') THEN 'annotated'
-        WHEN annotation_status IN ('accepted_with_minor_changes', 'accepted_with_major_changes', 'unreviewed', 'accepted') THEN NULL
-        WHEN task_status = 'annotated' THEN 'annotated'
-        ELSE NULL
-    END AS annotation_type,
-    CASE 
-        WHEN annotation_status IN ('accepted_with_minor_changes', 'accepted_with_major_changes', 'unreviewed', 'accepted') THEN 'reviewed'
-        WHEN annotation_status IN ('labeled', 'unlabeled') THEN NULL
-        WHEN task_status = 'reviewed' THEN 'reviewed'
-        ELSE NULL
-    END AS review_type
-    FROM intermediate_table
-    WHERE project_id = %s;
+    query= """
+        SELECT
+            project_id,
+            annotation_status,
+            CASE 
+                WHEN annotation_status IN ('labeled', 'unlabeled') THEN 'annotated'
+                WHEN annotation_status IN ('accepted_with_minor_changes', 'accepted_with_major_changes', 'unreviewed', 'accepted') THEN NULL
+                WHEN task_status = 'annotated' THEN 'annotated'
+                ELSE NULL
+            END AS annotation_type,
+            CASE 
+                WHEN annotation_status IN ('accepted_with_minor_changes', 'accepted_with_major_changes', 'unreviewed', 'accepted') THEN 'reviewed'
+                WHEN annotation_status IN ('labeled', 'unlabeled') THEN NULL
+                WHEN task_status = 'reviewed' THEN 'reviewed'
+                ELSE NULL
+            END AS review_type
+        FROM intermediate_table
+        WHERE project_id = %s;
     """
     df = pd.read_sql_query(query, conn, params=(project_id,))
 
@@ -103,7 +103,11 @@ def render_chart5(conn):
     st.markdown("---")
     st.markdown("### <a name='chart-5'></a>📈 Chart 5: Workspace level Annotation Stats", unsafe_allow_html=True)
 
-    workspace_id = st.selectbox("Select a Workspace", get_workspaces(conn))
+    # Workspace dropdown with id-name
+    workspaces = get_workspaces(conn)
+    workspace_display = {f"{wid} - {wname}": wid for wid, wname in workspaces}
+    selected_workspace_label = st.selectbox("Select a Workspace", list(workspace_display.keys()))
+    workspace_id = workspace_display[selected_workspace_label]
 
     if workspace_id:
         df = get_annotation_stats(conn, workspace_id)
@@ -113,16 +117,18 @@ def render_chart5(conn):
             return
 
         df_melted = df.melt(
-            id_vars='project_id',
+            id_vars=['project_id', 'project_title'],
             value_vars=['total_tasks', 'annotated_count', 'reviewed_count'],
             var_name='Annotation Type',
             value_name='Count'
         )
         df_melted["project_id"] = df_melted["project_id"].astype(str)
 
+        df_melted["project_label"] = df_melted["project_id"] + " - " + df_melted["project_title"]
+
         fig = px.bar(
             df_melted,
-            x='project_id',
+            x='project_label',
             y='Count',
             color='Annotation Type',
             barmode='group',
@@ -130,7 +136,7 @@ def render_chart5(conn):
             text='Count'
         )
         fig.update_layout(
-            xaxis_title="Project ID",
+            xaxis_title="Project",
             yaxis_title="Count",
             xaxis=dict(type='category'),
             legend_title_text='Annotation Type'
@@ -151,8 +157,13 @@ def render_chart5(conn):
         )
 
         st.markdown("---")
-        project_ids = df['project_id'].astype(str).tolist()
-        selected_project = st.selectbox("Select a Project to Drill Down", project_ids)
+        # Project dropdown with id-title
+        project_display = {
+            f"{row['project_id']} - {row['project_title']}": row['project_id']
+            for _, row in df.iterrows()
+        }
+        selected_project_label = st.selectbox("Select a Project to Drill Down", list(project_display.keys()))
+        selected_project = project_display[selected_project_label]
 
         if selected_project:
             df_detail = get_annotation_details(conn, int(selected_project))
@@ -189,7 +200,7 @@ def render_chart5(conn):
                 color="Annotation Status",
                 barmode="group",
                 text="Count",
-                title=f"Annotation Status Breakdown for Project {selected_project}"
+                title=f"Annotation Status Breakdown for Project {selected_project_label}"
             )
             fig_detail.update_layout(
                 xaxis_title="Annotation Type",
