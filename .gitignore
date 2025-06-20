@@ -1,3 +1,10 @@
 __pycache__/
 *.pyc
 .env
+data_transfer/
+# Ignore Streamlit's local configuration files
+.streamlit/
+# Ignore Streamlit's cache directory
+.cache/
+# Ignore Streamlit's secrets file
+.secrets.toml
