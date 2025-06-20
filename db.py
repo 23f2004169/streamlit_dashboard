@@ -3,25 +3,23 @@
 import psycopg2
 import streamlit as st
 
-DB_HOST = 'localhost'
-DB_PORT = "5432"
-DB_NAME = 'Summary_Report'
-DB_USER = 'postgres'
-DB_PASS = 'postgres'
+host = "e2e-97-65.ssdcloudindia.net"
+port = 5432
+dbname = "anudesh_monitoring"
+user = "admin"
+password = "9{L^O1hVIZsYBoDHIxjk${d9&k"
 
-# Database connection function for Streamlit app
 @st.cache_resource
 def get_connection():
     try:
         conn = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS
+            host=st.secrets["database"]["host"],
+            port=st.secrets["database"]["port"],
+            dbname=st.secrets["database"]["dbname"],
+            user=st.secrets["database"]["user"],
+            password=st.secrets["database"]["password"]
         )
-        # st.success("✅ Successfully connected to the database.")
         return conn
     except Exception as e:
-        # st.error(f"❌ Database connection failed: {e}")
+        st.error(f"❌ Database connection failed: {e}")
         return None
